@@ -1,0 +1,106 @@
+# Provides a Docker Compose setup for running DIB Interledger CLI demo
+#
+# ganache_right/left: ganache-cli instances for local ethereum
+#
+# dib_migrations: deploys the smart contracts to Ganache instances,
+#   copies the updated Interledger configuration file to the shared volume
+#
+# dib_interledger_x: runs DIB nodes
+#
+# interledger_demo: runs the CLI demo using configuration file from
+#   the shared volume
+
+version: '3.4'
+services:
+
+  interledger_demo:
+    image: dib_interledger_demo
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: run_demo
+    command: [ "python3", "demo/cli/cli.py", "config/dib-compose-node-1.cfg" ]
+    stdin_open: true
+    tty: true
+    restart: on-failure
+    depends_on:
+      - dib_interledger_1
+      - dib_interledger_2
+      - dib_interledger_3
+    volumes:
+      - config_file:/var/interledger/config/
+
+
+  dib_interledger_1:
+    image: dib_interledger
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: run_dib
+    command: [ "python3" , "start_dib.py", "config/dib-compose-node-1.cfg", "node.node_count=3"]
+
+    depends_on:
+      - dib_migrations
+    volumes:
+      - config_file:/var/interledger/config/
+
+  dib_interledger_2:
+    image: dib_interledger
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: run_dib
+    command: [ "python3" , "start_dib.py", "config/dib-compose-node-2.cfg", "node.node_count=3"]
+    depends_on:
+      - dib_migrations
+    volumes:
+      - config_file:/var/interledger/config/
+
+  dib_interledger_3:
+    image: dib_interledger
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: run_dib
+    command: [ "python3" , "start_dib.py", "config/dib-compose-node-3.cfg", "node.node_count=3"]
+    depends_on:
+      - dib_migrations
+    volumes:
+      - config_file:/var/interledger/config/
+
+
+  dib_migrations:
+    image: compose_migrations
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.migrations
+      target: compose_migrations
+    command: ["sh", "scripts/compose_deploy_ledgers.sh"]
+    depends_on:
+      - ganache_left
+      - ganache_right
+    volumes:
+      - config_file:/var/interledger/config/
+
+  ganache_left:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ganache
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 7545
+    expose:
+      - "7545"
+
+  ganache_right:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ganache
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 7545
+    expose:
+      - "7545"
+
+volumes:
+  config_file:

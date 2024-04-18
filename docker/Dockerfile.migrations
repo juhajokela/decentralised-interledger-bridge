@@ -1,0 +1,17 @@
+# build with "export DOCKER_BUILDKIT=1"
+
+# Prepares environment for deploying smart contracts for client ledgers
+FROM node:16-alpine AS compose_migrations
+RUN apk --no-cache add git python3 make gcc musl-dev g++
+COPY ./configs /var/interledger/configs
+COPY ./scripts /var/interledger/scripts
+COPY ./ledgers/solidity/contracts /var/interledger/ledgers/solidity/contracts
+COPY ./ledgers/solidity/migrations /var/interledger/ledgers/solidity/migrations
+COPY ./ledgers/solidity/package.json /var/interledger/ledgers/solidity/package.json
+COPY ./ledgers/solidity/package-lock.json /var/interledger/ledgers/solidity/package-lock.json
+COPY ./ledgers/solidity/truffle-config.js /var/interledger/ledgers/solidity/truffle-config.js
+WORKDIR /var/interledger/ledgers/solidity
+RUN npm install -g npm@8.6.0
+RUN npm install
+RUN npx truffle compile
+WORKDIR /var/interledger/

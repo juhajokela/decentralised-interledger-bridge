@@ -1,0 +1,1 @@
+docker run -it --rm -v "$(pwd)":/workdir -w /workdir interledger-dib sh -c "bash"
